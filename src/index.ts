@@ -13,7 +13,7 @@ import followRoutes from "./routes/followRoutes.js";
 import blockRoutes from "./routes/blockRoutes.js";
 import suggestionsRoutes from "./routes/suggestionsRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
-import likeRoutes from "./routes/likeRoutes.js";
+import voteRoutes from "./routes/voteRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import feedRoutes from "./routes/feedRoutes.js";
 import bookmarkRoutes from "./routes/bookmarkRoutes.js";
@@ -22,6 +22,7 @@ import searchRoutes from "./routes/searchRoutes.js";
 import trendingRoutes from "./routes/trendingRoutes.js";
 import storyRoutes from "./routes/storyRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 async function main() {
   await connectDb();
@@ -46,7 +47,7 @@ async function main() {
   app.use("/users", userRoutes);
   app.use("/users", followRoutes);
   app.use("/posts", postRoutes);
-  app.use("/posts", likeRoutes);
+  app.use("/posts", voteRoutes);
   app.use("/posts", commentRoutes);
   app.use("/feed", feedRoutes);
   app.use("/bookmarks", bookmarkRoutes);
@@ -55,6 +56,7 @@ async function main() {
   app.use("/trending", trendingRoutes);
   app.use("/stories", storyRoutes);
   app.use("/report", reportRoutes);
+  app.use("/admin", adminRoutes);
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 

@@ -6,6 +6,17 @@ export async function toggleBookmark(
   userId: string,
   postId: string
 ): Promise<{ bookmarked: boolean }> {
+  const post = await Post.findById(postId);
+  if (!post) {
+    const err = new Error("Post not found") as Error & { statusCode?: number };
+    err.statusCode = 404;
+    throw err;
+  }
+  if ((post.moderationStatus ?? "approved") !== "approved") {
+    const err = new Error("Bookmarks are only available on approved posts") as Error & { statusCode?: number };
+    err.statusCode = 403;
+    throw err;
+  }
   const existing = await Bookmark.findOne({ user: userId, post: postId });
   if (existing) {
     await Bookmark.deleteOne({ _id: existing._id });
@@ -32,7 +43,10 @@ export async function listBookmarks(
   const posts = bookmarks
     .slice(0, limit)
     .map((b) => (b as unknown as { post: InstanceType<typeof Post> }).post)
-    .filter(Boolean);
-  const formatted = await Promise.all(posts.map((p) => formatPost(p as unknown as Parameters<typeof formatPost>[0], userId)));
+    .filter(Boolean)
+    .filter((p) => (p as { moderationStatus?: string }).moderationStatus === "approved");
+  const formatted = await Promise.all(
+    posts.map((p) => formatPost(p as unknown as Parameters<typeof formatPost>[0], userId))
+  );
   return { posts: formatted, hasMore };
 }

@@ -1,6 +1,6 @@
 export { User } from "./User.js";
 export { Post } from "./Post.js";
-export { Like } from "./Like.js";
+export { PostVote } from "./PostVote.js";
 export { Comment } from "./Comment.js";
 export { Follow } from "./Follow.js";
 export { Bookmark } from "./Bookmark.js";
@@ -9,3 +9,5 @@ export { Story } from "./Story.js";
 export { StoryHighlight } from "./StoryHighlight.js";
 export { Block } from "./Block.js";
 export { Report } from "./Report.js";
+export { PayoutPeriod } from "./PayoutPeriod.js";
+export { CreatorEarningLine } from "./CreatorEarningLine.js";

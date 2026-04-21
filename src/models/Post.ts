@@ -8,11 +8,21 @@ const postSchema = new Schema(
     videoUrl: { type: String, default: null },
     isArchived: { type: Boolean, default: false, index: true },
     tags: { type: [String], default: [], index: true },
+    moderationStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+      index: true,
+    },
+    reviewedAt: { type: Date, default: null },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    rejectionReason: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
 postSchema.index({ author: 1, createdAt: -1 });
 postSchema.index({ isArchived: 1, createdAt: -1 });
+postSchema.index({ moderationStatus: 1, createdAt: 1 });
 
 export const Post = mongoose.models.Post ?? model("Post", postSchema);

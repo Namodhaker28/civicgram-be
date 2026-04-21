@@ -8,7 +8,7 @@ export const TRENDING_HASHTAG_DAYS = 30;
 export async function getTrendingTags(limit: number = 10): Promise<{ tag: string; count: number }[]> {
   const since = new Date(Date.now() - TRENDING_HASHTAG_DAYS * 24 * 60 * 60 * 1000);
   const agg = await Post.aggregate([
-    { $match: { isArchived: false, createdAt: { $gte: since } } },
+    { $match: { isArchived: false, moderationStatus: "approved", createdAt: { $gte: since } } },
     { $unwind: "$tags" },
     { $group: { _id: "$tags", count: { $sum: 1 } } },
     { $sort: { count: -1 } },
@@ -18,16 +18,33 @@ export async function getTrendingTags(limit: number = 10): Promise<{ tag: string
   return agg;
 }
 
-/** Trending posts by like count (or engagement). */
+/** Trending posts by net vote score (upvotes minus downvotes). */
 export async function getTrendingPosts(
   currentUserId: string | null,
   limit: number = 20
 ): Promise<Record<string, unknown>[]> {
   const agg = await Post.aggregate([
-    { $match: { isArchived: false } },
-    { $lookup: { from: "likes", localField: "_id", foreignField: "post", as: "likeCount" } },
-    { $addFields: { likesCount: { $size: "$likeCount" } } },
-    { $sort: { likesCount: -1, createdAt: -1 } },
+    { $match: { isArchived: false, moderationStatus: "approved" } },
+    { $lookup: { from: "postvotes", localField: "_id", foreignField: "post", as: "votes" } },
+    {
+      $addFields: {
+        score: {
+          $subtract: [
+            {
+              $size: {
+                $filter: { input: "$votes", as: "v", cond: { $eq: ["$$v.value", 1] } },
+              },
+            },
+            {
+              $size: {
+                $filter: { input: "$votes", as: "v", cond: { $eq: ["$$v.value", -1] } },
+              },
+            },
+          ],
+        },
+      },
+    },
+    { $sort: { score: -1, createdAt: -1 } },
     { $limit: limit },
   ]);
   return Promise.all(agg.map((p) => formatPost(p as unknown as Parameters<typeof formatPost>[0], currentUserId)));

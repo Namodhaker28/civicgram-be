@@ -1,8 +1,25 @@
 import { Comment, Notification, Post, User } from "../models/index.js";
 import { toAuthorJson } from "./userService.js";
+import { canViewModeration } from "./postService.js";
 
 /** List comments for a post (top-level first, with optional replies). */
-export async function listComments(postId: string): Promise<Record<string, unknown>[]> {
+export async function listComments(
+  postId: string,
+  viewerUserId: string | null,
+  viewerIsAdmin: boolean
+): Promise<Record<string, unknown>[]> {
+  const post = await Post.findById(postId);
+  if (!post) {
+    const err = new Error("Post not found") as Error & { statusCode?: number };
+    err.statusCode = 404;
+    throw err;
+  }
+  const mod = (post.moderationStatus ?? "approved") as "pending" | "approved" | "rejected";
+  if (!canViewModeration(mod, String(post.author), viewerUserId, viewerIsAdmin)) {
+    const err = new Error("Post not found") as Error & { statusCode?: number };
+    err.statusCode = 404;
+    throw err;
+  }
   const comments = await Comment.find({ post: postId, parent: null })
     .sort({ createdAt: 1 })
     .populate("author")
@@ -37,6 +54,17 @@ export async function createComment(
   content: string,
   parentId?: string | null
 ): Promise<Record<string, unknown>> {
+  const post = await Post.findById(postId);
+  if (!post) {
+    const err = new Error("Post not found") as Error & { statusCode?: number };
+    err.statusCode = 404;
+    throw err;
+  }
+  if ((post.moderationStatus ?? "approved") !== "approved") {
+    const err = new Error("Comments are only allowed on approved posts") as Error & { statusCode?: number };
+    err.statusCode = 403;
+    throw err;
+  }
   const comment = await Comment.create({
     post: postId,
     author: authorId,
@@ -44,8 +72,7 @@ export async function createComment(
     parent: parentId || null,
   });
   const populated = await Comment.findById(comment._id).populate("author");
-  const post = await Post.findById(postId);
-  if (post && String(post.author) !== authorId) {
+  if (String(post.author) !== authorId) {
     await Notification.create({
       user: post.author,
       type: "comment",

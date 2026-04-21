@@ -12,6 +12,8 @@ const userSchema = new Schema(
     bio: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
     isVerified: { type: Boolean, default: false },
+    /** Application role; `admin` can moderate and manage payouts. */
+    role: { type: String, enum: ["user", "admin"], default: "user", index: true },
   },
   { timestamps: true }
 );

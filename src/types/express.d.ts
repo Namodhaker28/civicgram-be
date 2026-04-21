@@ -8,6 +8,7 @@ export interface IUserDoc {
   bio: string;
   avatarUrl: string;
   isVerified: boolean;
+  role?: "user" | "admin";
   createdAt: Date;
   updatedAt: Date;
 }

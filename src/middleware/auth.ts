@@ -33,3 +33,21 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
   next();
 }
+
+/** True if the loaded user has admin role (JWT must be refreshed after role change). */
+export function isAdminUser(user: IUserDoc | undefined): boolean {
+  return user?.role === "admin";
+}
+
+/** Require authenticated admin; 403 otherwise. */
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (!isAdminUser(req.user)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  next();
+}

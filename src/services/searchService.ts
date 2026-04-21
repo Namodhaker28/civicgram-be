@@ -37,8 +37,12 @@ export async function searchPosts(
   const searchTerm = isTag ? term.slice(1) : term;
   const regex = new RegExp(searchTerm, "i");
   const query = isTag
-    ? { tags: regex, isArchived: false }
-    : { $or: [{ content: regex }, { tags: regex }], isArchived: false };
+    ? { tags: regex, isArchived: false, moderationStatus: "approved" as const }
+    : {
+        $or: [{ content: regex }, { tags: regex }],
+        isArchived: false,
+        moderationStatus: "approved" as const,
+      };
   const posts = await Post.find(query).sort({ createdAt: -1 }).limit(limit).lean();
   return Promise.all(posts.map((p) => formatPost(p as unknown as Parameters<typeof formatPost>[0], currentUserId)));
 }
@@ -48,7 +52,7 @@ export async function searchHashtags(q: string, limit: number = 10): Promise<{ t
   if (!q || q.trim().length === 0) return [];
   const regex = new RegExp("^" + q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
   const agg = await Post.aggregate([
-    { $match: { isArchived: false } },
+    { $match: { isArchived: false, moderationStatus: "approved" } },
     { $unwind: "$tags" },
     { $match: { tags: regex } },
     { $group: { _id: "$tags", count: { $sum: 1 } } },

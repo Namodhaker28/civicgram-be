@@ -1,7 +1,7 @@
 import { Router } from "express";
 import fs from "fs";
 import path from "path";
-import { optionalAuth, requireAuth } from "../middleware/auth.js";
+import { isAdminUser, optionalAuth, requireAuth } from "../middleware/auth.js";
 import { uploadPost } from "../lib/multer.js";
 import { uploadVideo as uploadVideoToCloudinary } from "../lib/cloudinary.js";
 import * as postService from "../services/postService.js";
@@ -25,6 +25,7 @@ router.get("/", optionalAuth, async (req, res, next) => {
       limit,
       includeArchived: false,
       currentUserId: req.user ? String(req.user._id) : null,
+      viewerIsAdmin: req.user ? isAdminUser(req.user) : false,
     });
     res.json(result);
   } catch (e) {
@@ -37,7 +38,8 @@ router.get("/:id", optionalAuth, async (req, res, next) => {
   try {
     const post = await postService.getPostById(
       req.params.id,
-      req.user ? String(req.user._id) : null
+      req.user ? String(req.user._id) : null,
+      req.user ? isAdminUser(req.user) : false
     );
     if (!post) {
       res.status(404).json({ error: "Post not found" });

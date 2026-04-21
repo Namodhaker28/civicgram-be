@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/auth.js";
+import { isAdminUser, optionalAuth, requireAuth } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validate.js";
 import * as commentService from "../services/commentService.js";
 
@@ -12,9 +12,13 @@ const createCommentSchema = z.object({
 });
 
 /** GET /posts/:postId/comments — list comments for a post. */
-router.get("/:postId/comments", async (req, res, next) => {
+router.get("/:postId/comments", optionalAuth, async (req, res, next) => {
   try {
-    const comments = await commentService.listComments(req.params.postId);
+    const comments = await commentService.listComments(
+      req.params.postId,
+      req.user ? String(req.user._id) : null,
+      req.user ? isAdminUser(req.user) : false
+    );
     res.json(comments);
   } catch (e) {
     next(e);

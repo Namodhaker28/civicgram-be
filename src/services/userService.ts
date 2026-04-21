@@ -49,6 +49,7 @@ export function toUserJson(user: InstanceType<typeof User> | IUserDoc | Record<s
     bio: u.bio ?? "",
     avatarUrl: u.avatarUrl ?? "",
     isVerified: u.isVerified ?? false,
+    role: (u.role as string) === "admin" ? "admin" : "user",
     createdAt: u.createdAt ?? null,
     updatedAt: u.updatedAt ?? null,
   };

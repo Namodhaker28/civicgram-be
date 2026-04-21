@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { env } from "../lib/env.js";
 import { User } from "../models/index.js";
+import { toUserJson } from "./userService.js";
 
 const JWT_SECRET = env.JWT_SECRET;
 const SALT_ROUNDS = 10;
@@ -68,29 +69,34 @@ export async function registerWithPassword(data: {
   }
   const hash = await bcrypt.hash(data.password, SALT_ROUNDS);
   const username = await generateUniqueUsername(trimmedName);
+  const emailLower = data.email?.toLowerCase().trim();
+  const adminRole =
+    emailLower && env.ADMIN_EMAILS.includes(emailLower) ? ("admin" as const) : ("user" as const);
 
   let user;
   try {
     user = await User.create({
-      email: data.email?.toLowerCase().trim(),
+      email: emailLower,
       mobile: data.mobile?.trim(),
       passwordHash: hash,
       name: trimmedName,
       username,
       bio: "",
       avatarUrl: "",
+      role: adminRole,
     });
   } catch (e: unknown) {
     if (e && typeof e === "object" && "code" in e && e.code === 11000) {
       const fallback = await generateUniqueUsername(`${trimmedName}_${randomBytes(2).toString("hex")}`);
       user = await User.create({
-        email: data.email?.toLowerCase().trim(),
+        email: emailLower,
         mobile: data.mobile?.trim(),
         passwordHash: hash,
         name: trimmedName,
         username: fallback,
         bio: "",
         avatarUrl: "",
+        role: adminRole,
       });
     } else {
       throw e;
@@ -128,21 +134,5 @@ export async function loginWithPassword(data: {
   return {
     user: toUserJson(user),
     token,
-  };
-}
-
-function toUserJson(user: InstanceType<typeof User>): object {
-  return {
-    id: user._id,
-    walletAddress: user.walletAddress ?? null,
-    email: user.email ?? null,
-    mobile: user.mobile ?? null,
-    username: user.username ?? null,
-    name: user.name ?? "",
-    bio: user.bio ?? "",
-    avatarUrl: user.avatarUrl ?? "",
-    isVerified: user.isVerified ?? false,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
   };
 }

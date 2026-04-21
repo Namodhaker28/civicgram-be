@@ -6,6 +6,7 @@ import { uploadAvatar } from "../lib/multer.js";
 import { uploadProfileAvatar } from "../lib/cloudinary.js";
 import * as userService from "../services/userService.js";
 import * as postService from "../services/postService.js";
+import * as payoutService from "../services/payoutService.js";
 
 const router = Router();
 
@@ -26,6 +27,20 @@ const updateMeSchema = z.object({
   username: usernameUpdateSchema.optional(),
   bio: z.string().max(500).optional(),
   avatarUrl: z.string().url().optional().or(z.literal("")),
+});
+
+/** GET /users/me/earnings — estimated month + history of closed periods. */
+router.get("/me/earnings", requireAuth, async (req, res, next) => {
+  try {
+    const uid = String(req.user!._id);
+    const [estimate, history] = await Promise.all([
+      payoutService.getEstimatedEarningsForUser(uid),
+      payoutService.getUserEarningsHistory(uid),
+    ]);
+    res.json({ estimate, history });
+  } catch (e) {
+    next(e);
+  }
 });
 
 /** GET /users/me — current user profile. */
