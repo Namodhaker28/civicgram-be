@@ -6,7 +6,12 @@ const userSchema = new Schema(
     walletAddress: { type: String, required: false, trim: true },
     email: { type: String, required: false, unique: true, sparse: true, trim: true, lowercase: true, index: true },
     mobile: { type: String, required: false, unique: true, sparse: true, trim: true, index: true },
+    /** Google account subject (`sub` claim); set for OAuth users. */
+    googleSub: { type: String, required: false, unique: true, sparse: true, trim: true, index: true },
     passwordHash: { type: String, required: false },
+    /** SHA-256 hex of raw verification token (never store raw token). */
+    emailVerificationTokenHash: { type: String, required: false },
+    emailVerificationExpires: { type: Date, required: false },
     username: { type: String, required: false, unique: true, sparse: true, trim: true },
     name: { type: String, default: "" },
     bio: { type: String, default: "" },

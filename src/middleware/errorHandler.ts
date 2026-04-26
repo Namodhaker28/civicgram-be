@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import multer from "multer";
+import { HttpError } from "../lib/httpError.js";
 
 /** Central error handler; returns consistent JSON error shape and logs errors. */
 export function errorHandler(
@@ -22,6 +23,11 @@ export function errorHandler(
     err.message.startsWith("Unexpected field")
   ) {
     res.status(400).json({ error: err.message });
+    return;
+  }
+
+  if (err instanceof HttpError) {
+    res.status(err.statusCode).json({ error: err.message });
     return;
   }
 

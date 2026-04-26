@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
-import { registerWithPassword, loginWithPassword } from "../services/authService.js";
+import {
+  registerWithPassword,
+  loginWithPassword,
+  verifyEmailWithToken,
+  resendVerificationEmail,
+  signInWithGoogle,
+} from "../services/authService.js";
 
 const router = Router();
 
@@ -18,14 +24,24 @@ const loginBodySchema = registerLoginFields.refine(
   }
 );
 
-const registerBodySchema = registerLoginFields
-  .extend({
-    name: z.string().trim().min(1, "Name is required").max(100, "Name is too long"),
-  })
-  .refine((data) => (!!data.email) !== (!!data.mobile), {
-    message: "Provide either email or mobile (not both)",
-    path: ["email"],
-  });
+const registerBodySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name is too long"),
+  email: z.string().email("Invalid email"),
+  mobile: z.string().min(1, "Mobile is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+const verifyEmailBodySchema = z.object({
+  token: z.string().min(1, "Verification token is required"),
+});
+
+const resendBodySchema = z.object({
+  email: z.string().email("Invalid email"),
+});
+
+const googleBodySchema = z.object({
+  credential: z.string().min(1, "Google credential is required"),
+});
 
 /** Extract first user-facing message from Zod field errors. */
 function firstValidationMessage(
@@ -35,7 +51,7 @@ function firstValidationMessage(
   return typeof first === "string" ? first : "Validation failed";
 }
 
-/** POST /auth/register — email/mobile + password. */
+/** POST /auth/register — email + mobile + password; verification email sent (no JWT). */
 router.post("/register", async (req, res, next) => {
   try {
     const result = registerBodySchema.safeParse(req.body);
@@ -58,6 +74,42 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
+/** POST /auth/verify-email — exchange token for JWT after email verification. */
+router.post("/verify-email", async (req, res, next) => {
+  try {
+    const result = verifyEmailBodySchema.safeParse(req.body);
+    if (!result.success) {
+      const flat = result.error.flatten().fieldErrors;
+      const message = firstValidationMessage(flat);
+      res.status(400).json({ error: message });
+      return;
+    }
+    const r = await verifyEmailWithToken(result.data.token);
+    res.json(r);
+  } catch (e) {
+    console.error("[auth/verify-email]", (e as Error).message);
+    next(e);
+  }
+});
+
+/** POST /auth/resend-verification — resend link for unverified password accounts. */
+router.post("/resend-verification", async (req, res, next) => {
+  try {
+    const result = resendBodySchema.safeParse(req.body);
+    if (!result.success) {
+      const flat = result.error.flatten().fieldErrors;
+      const message = firstValidationMessage(flat);
+      res.status(400).json({ error: message });
+      return;
+    }
+    const r = await resendVerificationEmail(result.data.email);
+    res.json(r);
+  } catch (e) {
+    console.error("[auth/resend-verification]", (e as Error).message);
+    next(e);
+  }
+});
+
 /** POST /auth/login — email/mobile + password. */
 router.post("/login", async (req, res, next) => {
   try {
@@ -76,6 +128,24 @@ router.post("/login", async (req, res, next) => {
     res.json(r);
   } catch (e) {
     console.error("[auth/login]", (e as Error).message);
+    next(e);
+  }
+});
+
+/** POST /auth/google — Google ID token (GIS credential). */
+router.post("/google", async (req, res, next) => {
+  try {
+    const result = googleBodySchema.safeParse(req.body);
+    if (!result.success) {
+      const flat = result.error.flatten().fieldErrors;
+      const message = firstValidationMessage(flat);
+      res.status(400).json({ error: message });
+      return;
+    }
+    const r = await signInWithGoogle(result.data.credential);
+    res.json(r);
+  } catch (e) {
+    console.error("[auth/google]", (e as Error).message);
     next(e);
   }
 });
